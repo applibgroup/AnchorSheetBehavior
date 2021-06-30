@@ -642,6 +642,12 @@ public class DragHelper {
         }
     }
 
+    /**
+     * Returns X coordinate of the Touch Event
+     * @param touchEvent The dispatched touch event
+     * @param index The index of the pointer
+     * @return X coordinate of touch point
+     */
     private float getTouchX(TouchEvent touchEvent, int index) {
         float x = 0;
         if (touchEvent.getPointerCount() > index) {
@@ -650,6 +656,12 @@ public class DragHelper {
         return x;
     }
 
+    /**
+     * Returns Y coordinate of the Touch Event
+     * @param touchEvent The dispatched touch event
+     * @param index The index of the pointer
+     * @return Y coordinate of touch point
+     */
     private float getTouchY(TouchEvent touchEvent, int index) {
         float y = 0;
         if (touchEvent.getPointerCount() > index) {

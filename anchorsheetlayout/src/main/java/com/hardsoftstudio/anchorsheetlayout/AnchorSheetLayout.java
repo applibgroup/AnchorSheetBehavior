@@ -12,6 +12,10 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * AnchorSheetLayout is a custom layout where it can support only one child. So, for adding multiple
+ * components add a single layout as child and add remaining components as children to that layout.
+ */
 public class AnchorSheetLayout extends ComponentContainer
 {
 
@@ -83,6 +87,7 @@ public class AnchorSheetLayout extends ComponentContainer
      */
     public static final int STATE_FORCE_HIDDEN = 7;
 
+    // Possible AnchorSheet States
     @IntDef({
             STATE_EXPANDED,
             STATE_COLLAPSED,
@@ -95,33 +100,38 @@ public class AnchorSheetLayout extends ComponentContainer
     @Retention(RetentionPolicy.SOURCE)
     public @interface State {
     }
-
+    // Threshold to make sheet hide
     private static final float HIDE_THRESHOLD = 0.25f;
 
+    // Resistance given to vertical velocity
     private static final float HIDE_FRICTION = 0.1f;
 
+    // Default values
     private static final float ANCHOR_THRESHOLD = 0.50f;
-
     private static final int DEFAULT_PEEK_HEIGHT = 217;
-
     private static final int DEFAULT_MIN_OFFSET = 0;
-
     private static final boolean CAN_HIDE = true;
-
     private static final boolean SKIP_COLLAPSE = false;
 
+    // Decides the height of the Sheet in Anchor State
     private float mAnchorThreshold = ANCHOR_THRESHOLD;
 
+    // Height of the Sheet when in Collapsed State
     private int mPeekHeight;
 
+    // Distance between Layout Top and Child Top in Hidden State
     private int mMinOffset;
 
+    // Distance between Layout Top and Child Top in Expanded State
     private int mMaxOffset;
 
+    // Distance between Layout Top and Child Top in Anchor State
     private int mAnchorOffset;
 
+    // Says whether Anchor Sheet can go to Hidden State
     private boolean mHideable;
 
+    // Whether to avoid Collapse State when Sheet is moving down
     private boolean mSkipCollapsed;
 
     @State
@@ -131,18 +141,27 @@ public class AnchorSheetLayout extends ComponentContainer
 
     private int mParentHeight;
 
+    // reference to one and only child
     private WeakReference<ComponentContainer> mViewRef;
 
     private AnchorSheetCallback mCallback;
 
+    // Touched scrollable component
     private boolean mIsTouchOnScroll = false;
 
+    // First move action in a touch event
     private boolean mFirstMove = true;
 
+    // Scrollable component receiving the touch event
     private Component mScrollView;
 
+    // last touch point
+    private float lastY = 0;
+
+    // list for storing all the scrollable children references
     private final List<WeakReference<Component>> mChildrenList;
 
+    // XML attribute
     private static final String ATTR_PEEK_HEIGHT = "peekHeight";
     private int peekHeight;
 
@@ -177,10 +196,14 @@ public class AnchorSheetLayout extends ComponentContainer
             }
         });
     }
-    private float lastY = 0;
 
-    private void initDragHelper(){
+    /**
+     * Initialises DragHelper and DragHelper Callback
+     */
+    private void initDragHelper() {
         DragHelper.Callback mDragCallback = new DragHelper.Callback() {
+
+            // called whenever dragHelper is trying to capture the view
             @Override
             public boolean tryCaptureView(Component child, int pointerId) {
                 if (mState == STATE_DRAGGING) {
@@ -189,11 +212,13 @@ public class AnchorSheetLayout extends ComponentContainer
                 return mViewRef != null && mViewRef.get() == child;
             }
 
+            // called when the position of the view is changed
             @Override
             public void onViewPositionChanged(Component changedView, int left, int top, int dx, int dy) {
                 dispatchOnSlide(top);
             }
 
+            // called when the state of the captured view is changed
             @Override
             public void onViewDragStateChanged(int state) {
                 if (state == DragHelper.STATE_DRAGGING) {
@@ -201,12 +226,13 @@ public class AnchorSheetLayout extends ComponentContainer
                 }
             }
 
+            // called when the captured view is released
             @Override
             public void onViewReleased(Component releasedChild, float xvel, float yvel, float dx, float dy) {
                 int currentTop = (int) releasedChild.getContentPositionY();
                 @State int targetState;
 
-                if (yvel == 0.f) {
+                if (yvel == 0.f) { // velocity is zero
                     if (Math.abs(currentTop - mMinOffset) < Math.abs(currentTop - mAnchorOffset)) {
                         targetState = STATE_EXPANDED;
                     } else if (Math.abs(currentTop - mAnchorOffset) < Math.abs(currentTop - mMaxOffset)) {
@@ -220,13 +246,13 @@ public class AnchorSheetLayout extends ComponentContainer
                     } else {
                         targetState = STATE_ANCHOR;
                     }
-                } else if (dy > 0) {
+                } else if (dy > 0) { // moving down
                     if ((isHideable() && shouldHide(releasedChild, yvel)) || getSkipCollapsed()) {
                         targetState = STATE_HIDDEN;
                     } else {
                         targetState = STATE_COLLAPSED;
                     }
-                } else {
+                } else { // just a click
                     if(currentTop==mAnchorOffset) targetState = STATE_ANCHOR;
                     else if(currentTop==mMinOffset) targetState = STATE_EXPANDED;
                     else if(currentTop==mMaxOffset) targetState = STATE_COLLAPSED;
@@ -235,17 +261,20 @@ public class AnchorSheetLayout extends ComponentContainer
                 if(targetState!=mState) startSettlingAnimation(releasedChild, targetState, (int) yvel);
             }
 
+            // returns the vertical position of the captured view when it's been dragged
             @Override
             public int clampViewPositionVertical(Component child, int top, int dy) {
 
                 return Math.min(mHideable ? mParentHeight : mMaxOffset, Math.max(mMinOffset, top));
             }
 
+            // returns the horizontal position of the captured view when it's been dragged
             @Override
             public int clampViewPositionHorizontal(Component child, int left, int dx) {
                 return child.getLeft();
             }
 
+            // possible vertical drag
             @Override
             public int getViewVerticalDragRange(Component child) {
                 if (mHideable) {
@@ -276,7 +305,9 @@ public class AnchorSheetLayout extends ComponentContainer
             @Override
             public void onComponentBoundToWindow(Component component) {
                 if(mChildrenList!=null) mChildrenList.clear();
+                // find all the scrollable children
                 findScrollingChild(mChild);
+                // set the child position
                 switch (mState){
                     case STATE_EXPANDED:
                         mChild.setContentPositionY(mMinOffset);
@@ -297,13 +328,14 @@ public class AnchorSheetLayout extends ComponentContainer
             }
 
             @Override
-            public void onComponentUnboundFromWindow(Component component) {
-
-            }
+            public void onComponentUnboundFromWindow(Component component) { }
         });
     }
 
-    private void initTouchEventListener(){
+    /**
+     * Initialises and Assigns TouchEventListener to the Single Child in the Layout.
+     */
+    private void initTouchEventListener() {
         TouchEventListener touchEventListener = (component, event) -> {
             int action = event.getAction();
             float currentY = event.getPointerScreenPosition(0).getY();
@@ -311,6 +343,7 @@ public class AnchorSheetLayout extends ComponentContainer
                 mFirstMove = true;
                 lastY = currentY;
                 if(mState == STATE_EXPANDED){
+                    // traverse through all the children and see whether touch given to any scrollable child
                     for (WeakReference<Component> componentWeakReference : mChildrenList) {
                         float x = getTouchX(event,0);
                         float y = getTouchY(event,0);
@@ -526,7 +559,11 @@ public class AnchorSheetLayout extends ComponentContainer
         return Math.abs(newTop - mMaxOffset) / (float) mPeekHeight > HIDE_THRESHOLD;
     }
 
-    void dispatchOnSlide(int top) {
+    /**
+     * Provides Callback call
+     * @param top The top of the captured child
+     */
+    private void dispatchOnSlide(int top) {
         Component bottomSheet = mViewRef.get();
         if (bottomSheet != null && mCallback != null) {
             if (top > mMaxOffset) {
@@ -539,6 +576,12 @@ public class AnchorSheetLayout extends ComponentContainer
         }
     }
 
+    /**
+     * Returns X coordinate of the Touch Event
+     * @param touchEvent The dispatched touch event
+     * @param index The index of the pointer
+     * @return X coordinate of touch point
+     */
     public static float getTouchX(TouchEvent touchEvent, int index) {
         float x = 0;
         if (touchEvent.getPointerCount() > index) {
@@ -547,6 +590,12 @@ public class AnchorSheetLayout extends ComponentContainer
         return x;
     }
 
+    /**
+     * Returns Y coordinate of the Touch Event
+     * @param touchEvent The dispatched touch event
+     * @param index The index of the pointer
+     * @return Y coordinate of touch point
+     */
     public static float getTouchY(TouchEvent touchEvent, int index) {
         float y = 0;
         if (touchEvent.getPointerCount() > index) {
@@ -581,7 +630,12 @@ public class AnchorSheetLayout extends ComponentContainer
         startSettlingAnimation(child,state,0);
     }
 
-
+    /**
+     * Provides animation for settling state of the AnchorSheet
+     * @param child The Captured Child
+     * @param state The State of the AnchorSheet
+     * @param yvel The Vertical Velocity at which view is released
+     */
     private void startSettlingAnimation(Component child, int state, int yvel) {
         int top;
         int currentTop = (int) child.getContentPositionY();
@@ -626,6 +680,13 @@ public class AnchorSheetLayout extends ComponentContainer
         return this.computeAxisDuration(dy, yvel, mDragHelper.getCallback().getViewVerticalDragRange(child));
     }
 
+    /**
+     * Time taken for settling
+     * @param delta distance
+     * @param velocity velocity with it travels
+     * @param motionRange possible vertical drag range
+     * @return Time taken for settling
+     */
     private int computeAxisDuration(int delta, int velocity, int motionRange) {
         if (delta == 0) {
             return 0;
@@ -644,6 +705,13 @@ public class AnchorSheetLayout extends ComponentContainer
             }
             return Math.min(duration, 200);
         }
+    }
+
+    // helper function for computeAxisDuration
+    private float distanceInfluenceForSnapDuration(float f) {
+        f -= 0.5F; // center the values about 0.
+        f *= 0.47123894F;
+        return (float)Math.sin(f);
     }
 
     /**
@@ -666,11 +734,4 @@ public class AnchorSheetLayout extends ComponentContainer
             return value;
         }
     }
-
-    private float distanceInfluenceForSnapDuration(float f) {
-        f -= 0.5F; // center the values about 0.
-        f *= 0.47123894F;
-        return (float)Math.sin(f);
-    }
-
 }
