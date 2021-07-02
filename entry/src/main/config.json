@@ -17,7 +17,8 @@
     "package": "com.hardsoftstudio.anchorsheetlayout",
     "name": ".MyApplication",
     "deviceType": [
-      "phone"
+      "phone",
+      "tablet"
     ],
     "distro": {
       "deliveryWithInstall": true,

@@ -1,16 +1,17 @@
 package com.hardsoftstudio.anchorsheetlayout;
 
-import ohos.agp.components.*;
+import java.util.Arrays;
+import ohos.agp.components.Component;
+import ohos.agp.components.ComponentContainer;
+import ohos.agp.components.VelocityDetector;
 import ohos.multimodalinput.event.ManipulationEvent;
 import ohos.multimodalinput.event.TouchEvent;
-import java.util.Arrays;
 
+/**
+ * DragHelper is a utility class for writing AnchorSheetLayout. It helps in
+ * dragging the components within the component container
+ */
 public class DragHelper {
-
-    /**
-     * A null/invalid pointer ID.
-     */
-    public static final int INVALID_POINTER = -1;
 
     /**
      * A component is not currently being dragged or animating as a result of a fling/snap.
@@ -22,16 +23,9 @@ public class DragHelper {
      */
     public static final int STATE_DRAGGING = 1;
 
-    /** Current drag state; idle, dragging or settling */
+    /** Current drag state; idle, dragging or settling. */
     private int mDragState;
 
-    /** Distance to travel before a drag may begin */
-    private final int mTouchSlop;
-
-    /** Last known position/pointer tracking */
-    private int mActivePointerId = INVALID_POINTER;
-
-    public static final int DEFAULT_TOUCH_SLOP = 24;
     public static final int DEFAULT_MIN_VELOCITY = 100;
     public static final int DEFAULT_MAX_VELOCITY = 3000;
 
@@ -75,7 +69,6 @@ public class DragHelper {
         } else {
             this.mParentView = forParent;
             this.mCallback = cb;
-            this.mTouchSlop = DEFAULT_TOUCH_SLOP;
             this.mMaxVelocity = DEFAULT_MAX_VELOCITY;
             this.mMinVelocity = DEFAULT_MIN_VELOCITY;
         }
@@ -97,15 +90,17 @@ public class DragHelper {
      *
      * @return the minimum velocity that will be detected
      */
-    public float getMaxVelocity(){
+    public float getMaxVelocity() {
         return this.mMaxVelocity;
 
     }
 
     /**
+     * Returns the Callback of the current DragHelper Object.
+     *
      * @return CallBack object
      */
-    public Callback getCallback(){
+    public Callback getCallback() {
         return this.mCallback;
     }
 
@@ -113,15 +108,14 @@ public class DragHelper {
      * Capture a specific child view for dragging within the parent.
      *
      * @param childView Child view to capture
-     * @param activePointerId ID of the pointer that is dragging the captured child view
      */
-    public void captureChildView(@NonNull Component childView, int activePointerId) {
+    public void captureChildView(@NonNull Component childView) {
         if (childView.getComponentParent() != this.mParentView) {
-            throw new IllegalArgumentException("captureChildView: parameter must be a descendant of the ViewDragHelper's tracked parent view (" + this.mParentView + ")");
+            throw new IllegalArgumentException("captureChildView: parameter must"
+                    + " be a descendant of the ViewDragHelper's tracked parent view (" + this.mParentView + ")");
         } else {
             this.mCapturedView = childView;
-            this.mActivePointerId = activePointerId;
-            this.setDragState(1);
+            this.setDragState(STATE_DRAGGING);
         }
     }
 
@@ -130,7 +124,6 @@ public class DragHelper {
      * {@link #processTouchEvent(TouchEvent)} receiving an ACTION_CANCEL event.
      */
     private void cancel() {
-        this.mActivePointerId = -1;
         this.clearMotionHistory();
         if (this.mVelocityDetector != null) {
             this.mVelocityDetector.clear();
@@ -164,12 +157,13 @@ public class DragHelper {
      * Invokes Callback and sets the Drag State to Idle.
      */
     private void dispatchViewReleased(float xvel, float yvel) {
-        this.mCallback.onViewReleased(this.mCapturedView, xvel, yvel,this.mDeltaX,this.mDeltaY);
+        this.mCallback.onViewReleased(this.mCapturedView, xvel, yvel, this.mDeltaX, this.mDeltaY);
         if (this.mDragState == 1) {
-            this.setDragState(0);
+            this.setDragState(STATE_IDLE);
         }
     }
 
+    // clears the motion history
     private void clearMotionHistory() {
         if (this.mInitialMotionX != null) {
             Arrays.fill(this.mInitialMotionX, 0.0F);
@@ -178,17 +172,6 @@ public class DragHelper {
             Arrays.fill(this.mLastMotionY, 0.0F);
             this.mPointersDown = 0;
         }
-    }
-
-    private void clearMotionHistory(int pointerId) {
-        if (mInitialMotionX == null || !isPointerDown(pointerId)) {
-            return;
-        }
-        mInitialMotionX[pointerId] = 0;
-        mInitialMotionY[pointerId] = 0;
-        mLastMotionX[pointerId] = 0;
-        mLastMotionY[pointerId] = 0;
-        mPointersDown &= ~(1 << pointerId);
     }
 
     private void ensureMotionHistorySizeForId(int pointerId) {
@@ -210,6 +193,7 @@ public class DragHelper {
         }
     }
 
+    // saves the initial motion
     private void saveInitialMotion(float x, float y, int pointerId) {
         this.ensureMotionHistorySizeForId(pointerId);
         this.mInitialMotionX[pointerId] = this.mLastMotionX[pointerId] = x;
@@ -217,13 +201,14 @@ public class DragHelper {
         this.mPointersDown |= 1 << pointerId;
     }
 
+    // saves the last motion
     private void saveLastMotion(ManipulationEvent ev) {
         int pointerCount = ev.getPointerCount();
-        for(int i = 0; i < pointerCount; ++i) {
+        for (int i = 0; i < pointerCount; ++i) {
             int pointerId = ev.getPointerId(i);
             if (this.isValidPointerForActionMove(pointerId)) {
-                float x = getTouchX((TouchEvent) ev,i);
-                float y = getTouchY((TouchEvent) ev,i);
+                float x = getTouchX((TouchEvent) ev, i);
+                float y = getTouchY((TouchEvent) ev, i);
                 this.mLastMotionX[pointerId] = x;
                 this.mLastMotionY[pointerId] = y;
             }
@@ -246,6 +231,7 @@ public class DragHelper {
         return (this.mPointersDown & 1 << pointerId) != 0;
     }
 
+    // sets the Drag State
     private void setDragState(int state) {
         if (this.mDragState != state) {
             this.mDragState = state;
@@ -259,26 +245,19 @@ public class DragHelper {
 
     /**
      * Attempt to capture the view with the given pointer ID. The callback will be involved.
-     * This will put us into the "dragging" state. If we've already captured this view with
-     * this pointer this method will immediately return true without consulting the callback.
+     * This will put us into the "dragging" state.
      *
      * @param toCapture View to capture
      * @param pointerId Pointer to capture with
-     * @return true if capture was successful
      */
-    private boolean tryCaptureViewForDrag(Component toCapture, int pointerId) {
-        if (toCapture == this.mCapturedView && this.mActivePointerId == pointerId) {
-            return true;
-        } else if (toCapture != null && this.mCallback.tryCaptureView(toCapture, pointerId)) {
-            this.mActivePointerId = pointerId;
-            this.captureChildView(toCapture, pointerId);
-            return true;
-        } else {
-            return false;
+    private void tryCaptureViewForDrag(Component toCapture, int pointerId) {
+        if (toCapture != null && this.mCallback.tryCaptureView(toCapture, pointerId)) {
+            this.captureChildView(toCapture);
         }
     }
 
-    private void saveDeltaXY(float dx ,float dy){
+    // saves latest distance travelled by the pointer
+    private void saveDeltaXnY(float dx, float dy) {
         this.mDeltaX = dx;
         this.mDeltaY = dy;
     }
@@ -286,7 +265,8 @@ public class DragHelper {
     /**
      * Process a touch event. This method will dispatch callback events
      * as needed before returning.
-     * @param ev The touch event received by the parent view
+     *
+     * @param ev The touch event received by the parent view.
      */
     public void processTouchEvent(@NonNull TouchEvent ev) {
         int action = ev.getAction();
@@ -299,13 +279,12 @@ public class DragHelper {
             this.mVelocityDetector = VelocityDetector.obtainInstance();
         }
         this.mVelocityDetector.addEvent(ev);
-
-        switch(action) {
-            case TouchEvent.PRIMARY_POINT_DOWN:{
-                final float x = getTouchX(ev,0);
-                final float y = getTouchY(ev,0);
+        switch (action) {
+            case TouchEvent.PRIMARY_POINT_DOWN: {
+                final float x = getTouchX(ev, 0);
+                final float y = getTouchY(ev, 0);
                 final int pointerId = ev.getPointerId(0);
-                final Component toCapture = this.findTopChildUnder((int)x, (int)y);
+                final Component toCapture = this.findTopChildUnder((int) x, (int) y);
                 this.saveInitialMotion(x, y, pointerId);
                 this.tryCaptureViewForDrag(toCapture, pointerId);
                 break;
@@ -318,130 +297,37 @@ public class DragHelper {
                 break;
             }
             case TouchEvent.POINT_MOVE: {
-                if (this.mDragState == 1) {
-                    if (this.isValidPointerForActionMove(this.mActivePointerId)) {
-                        final float x = getTouchX(ev, mActivePointerId);
-                        final float y = getTouchY(ev, mActivePointerId);
-                        final int idx = (int) (x - this.mLastMotionX[this.mActivePointerId]);
-                        final int idy = (int) (y - this.mLastMotionY[this.mActivePointerId]);
-                        this.dragTo((int) (this.mCapturedView.getContentPositionX() + idx), (int) (this.mCapturedView.getContentPositionY() + idy), idx, idy);
-                        this.saveLastMotion(ev);
-                    }
-                } else {
-                    int pointerCount = ev.getPointerCount();
-                    for (int i = 0; i < pointerCount; ++i) {
-                        final int pointerId = ev.getPointerId(i);
-                        if (this.isValidPointerForActionMove(pointerId)) {
-                            final float x = getTouchX(ev, i);
-                            final float y = getTouchY(ev, i);
-                            final float dx = x - this.mInitialMotionX[pointerId];
-                            final float dy = y - this.mInitialMotionY[pointerId];
-                            if (this.mDragState == 1) {
-                                break;
-                            }
-                            final Component toCapture = this.findTopChildUnder((int) x, (int) y);
-                            if (this.checkTouchSlop(toCapture, dx, dy) && this.tryCaptureViewForDrag(toCapture, pointerId)) {
-                                break;
-                            }
-                        }
-                    }
+                if (this.mDragState == STATE_DRAGGING) {
+                    final float x = getTouchX(ev, actionIndex);
+                    final float y = getTouchY(ev, actionIndex);
+                    final int idx = (int) (x - this.mLastMotionX[actionIndex]);
+                    final int idy = (int) (y - this.mLastMotionY[actionIndex]);
+                    this.dragTo((int) (this.mCapturedView.getContentPositionX() + idx),
+                            (int) (this.mCapturedView.getContentPositionY() + idy), idx, idy);
                     this.saveLastMotion(ev);
                 }
                 break;
             }
-
-            case TouchEvent.OTHER_POINT_DOWN: {
-                final int pointerId = ev.getPointerId(actionIndex);
-                final float x = getTouchX(ev,actionIndex);
-                final float y = getTouchY(ev,actionIndex);
-                saveInitialMotion(x, y, pointerId);
-                // A DragHelper can only manipulate one view at a time.
-                if (mDragState == STATE_IDLE) {
-                    // If we're idle we can do anything! Treat it like a normal down event.
-                    final Component toCapture = findTopChildUnder((int) x, (int) y);
-                    tryCaptureViewForDrag(toCapture, pointerId);
-                } else if (isCapturedViewUnder((int) x, (int) y)) {
-                    // We're still tracking a captured view. If the same view is under this
-                    // point, we'll swap to controlling it with this pointer instead.
-                    // (This will still work if we're "catching" a settling view.)
-                    tryCaptureViewForDrag(mCapturedView, pointerId);
-                }
-                break;
-            }
-
-            case TouchEvent.OTHER_POINT_UP: {
-                final int pointerId = ev.getPointerId(actionIndex);
-                if (mDragState == STATE_DRAGGING && pointerId == mActivePointerId) {
-                    // Try to find another pointer that's still holding on to the captured view.
-                    int newActivePointer = INVALID_POINTER;
-                    final int pointerCount = ev.getPointerCount();
-                    for (int i = 0; i < pointerCount; i++) {
-                        final int id = ev.getPointerId(i);
-                        if (id == mActivePointerId) {
-                            // This one's going away, skip.
-                            continue;
-                        }
-                        final float x = getTouchX(ev,i);
-                        final float y = getTouchY(ev,i);
-                        if (findTopChildUnder((int) x, (int) y) == mCapturedView &&
-                                tryCaptureViewForDrag(mCapturedView, id)) {
-                            newActivePointer = mActivePointerId;
-                            break;
-                        }
-                    }
-                    if (newActivePointer == INVALID_POINTER) {
-                        // We didn't find another pointer still touching the view, release it.
-                        releaseViewForPointerUp();
-                    }
-                }
-                clearMotionHistory(pointerId);
-                break;
-            }
-
             case TouchEvent.CANCEL:
                 if (this.mDragState == 1) {
                     this.dispatchViewReleased(0.0F, 0.0F);
                 }
                 this.cancel();
+                break;
             default:
                 break;
         }
     }
 
-    /**
-     * Check if we've crossed a reasonable touch slop for the given child view.
-     * If the child cannot be dragged along the horizontal or vertical axis, motion
-     * along that axis will not count toward the slop check.
-     *
-     * @param child Child to check
-     * @param dx Motion since initial position along X axis
-     * @param dy Motion since initial position along Y axis
-     * @return true if the touch slop has been crossed
-     */
-    private boolean checkTouchSlop(Component child, float dx, float dy) {
-        if (child == null) {
-            return false;
-        } else {
-            boolean checkHorizontal = this.mCallback.getViewHorizontalDragRange(child) > 0;
-            boolean checkVertical = this.mCallback.getViewVerticalDragRange(child) > 0;
-            if (checkHorizontal && checkVertical) {
-                return dx * dx + dy * dy > (float)(this.mTouchSlop * this.mTouchSlop);
-            } else if (checkHorizontal) {
-                return Math.abs(dx) > (float)this.mTouchSlop;
-            } else if (checkVertical) {
-                return Math.abs(dy) > (float)this.mTouchSlop;
-            } else {
-                return false;
-            }
-        }
-    }
-
     private void releaseViewForPointerUp() {
-        this.mVelocityDetector.calculateCurrentVelocity(1000);float xvel = this.clampMag(this.mVelocityDetector.getHorizontalVelocity(), this.mMinVelocity, this.mMaxVelocity);
+        this.mVelocityDetector.calculateCurrentVelocity(1000);
+        float xvel = this.clampMag(this.mVelocityDetector.getHorizontalVelocity(),
+                this.mMinVelocity, this.mMaxVelocity);
         float yvel = this.clampMag(this.mVelocityDetector.getVerticalVelocity(), this.mMinVelocity, this.mMaxVelocity);
         this.dispatchViewReleased(xvel, yvel);
     }
 
+    // moves the captured view
     private void dragTo(int left, int top, int dx, int dy) {
         int clampedX = left;
         int clampedY = top;
@@ -458,42 +344,10 @@ public class DragHelper {
         if (dx != 0 || dy != 0) {
             int clampedDx = clampedX - oldLeft;
             int clampedDy = clampedY - oldTop;
-            saveDeltaXY(clampedDx,clampedDy);
+            saveDeltaXnY(clampedDx, clampedDy);
             this.mCallback.onViewPositionChanged(this.mCapturedView, clampedX, clampedY, clampedDx, clampedDy);
         }
 
-    }
-
-    /**
-     * Determine if the currently captured view is under the given point in the
-     * parent view's coordinate system. If there is no captured view this method
-     * will return false.
-     *
-     * @param x X position to test in the parent's coordinate system
-     * @param y Y position to test in the parent's coordinate system
-     * @return true if the captured view is under the given point, false otherwise
-     */
-    private boolean isCapturedViewUnder(int x, int y) {
-        return isViewUnder(mCapturedView, x, y);
-    }
-
-    /**
-     * Determine if the supplied view is under the given point in the
-     * parent view's coordinate system.
-     *
-     * @param view Child view of the parent to hit test
-     * @param x X position to test in the parent's coordinate system
-     * @param y Y position to test in the parent's coordinate system
-     * @return true if the supplied view is under the given point, false otherwise
-     */
-    private boolean isViewUnder(Component view, int x, int y) {
-        if (view == null) {
-            return false;
-        }
-        return x >= view.getLeft() &&
-                x < view.getRight() &&
-                y >= view.getTop() &&
-                y < view.getBottom();
     }
 
     /**
@@ -507,9 +361,10 @@ public class DragHelper {
     @Nullable
     private Component findTopChildUnder(int x, int y) {
         int childCount = this.mParentView.getChildCount();
-        for(int i = childCount - 1; i >= 0; --i) {
+        for (int i = childCount - 1; i >= 0; --i) {
             Component child = this.mParentView.getComponentAt(this.mCallback.getOrderedChildIndex(i));
-            if (x >= child.getContentPositionX() && x < child.getRight() && y >= child.getContentPositionY() && y < child.getBottom()) {
+            if (x >= child.getContentPositionX() && x < child.getRight() && y >= child.getContentPositionY()
+                    && y < child.getBottom()) {
                 return child;
             }
         }
@@ -527,9 +382,10 @@ public class DragHelper {
      * about the state of the parent view upon request. The callback also makes decisions
      * governing the range and drag ability of child views.
      */
-    public abstract static class Callback {
-        public Callback() {
+    protected abstract static class Callback {
+        protected Callback() {
         }
+
         /**
          * Called when the drag state changes. See the <code>STATE_*</code> constants
          * for more information.
@@ -579,26 +435,13 @@ public class DragHelper {
         }
 
         /**
-         * Return the magnitude of a draggable child view's horizontal range of motion in pixels.
-         * This method should return 0 for views that cannot move horizontally.
-         *
-         * @param child Child view to check
-         * @return range of horizontal motion in pixels
-         */
-        public int getViewHorizontalDragRange(@NonNull Component child) {
-            return 0;
-        }
-
-        /**
          * Return the magnitude of a draggable child view's vertical range of motion in pixels.
          * This method should return 0 for views that cannot move vertically.
          *
          * @param child Child view to check
          * @return range of vertical motion in pixels
          */
-        public int getViewVerticalDragRange(@NonNull Component child) {
-            return 0;
-        }
+        public abstract int getViewVerticalDragRange(@NonNull Component child);
 
         /**
          * Called when the user's input indicates that they want to capture the given child view
@@ -622,9 +465,7 @@ public class DragHelper {
          * @param dx Proposed change in position for left
          * @return The new clamped position for left
          */
-        public int clampViewPositionHorizontal(@NonNull Component child, int left, int dx) {
-            return 0;
-        }
+        public abstract int clampViewPositionHorizontal(@NonNull Component child, int left, int dx);
 
         /**
          * Restrict the motion of the dragged child view along the vertical axis.
@@ -637,13 +478,12 @@ public class DragHelper {
          * @param dy Proposed change in position for top
          * @return The new clamped position for top
          */
-        public int clampViewPositionVertical(@NonNull Component child, int top, int dy) {
-            return 0;
-        }
+        public abstract int clampViewPositionVertical(@NonNull Component child, int top, int dy);
     }
 
     /**
-     * Returns X coordinate of the Touch Event
+     * Returns X coordinate of the Touch Event.
+     *
      * @param touchEvent The dispatched touch event
      * @param index The index of the pointer
      * @return X coordinate of touch point
@@ -657,7 +497,8 @@ public class DragHelper {
     }
 
     /**
-     * Returns Y coordinate of the Touch Event
+     * Returns Y coordinate of the Touch Event.
+     *
      * @param touchEvent The dispatched touch event
      * @param index The index of the pointer
      * @return Y coordinate of touch point

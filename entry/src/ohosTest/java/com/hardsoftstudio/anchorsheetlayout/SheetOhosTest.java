@@ -85,8 +85,23 @@ public class SheetOhosTest {
 
     private final DragHelper dragHelper = DragHelper.create(anchorSheetLayout, new DragHelper.Callback() {
         @Override
+        public int getViewVerticalDragRange(Component child) {
+            return 0;
+        }
+
+        @Override
         public boolean tryCaptureView(Component child, int pointerId) {
             return false;
+        }
+
+        @Override
+        public int clampViewPositionHorizontal(Component child, int left, int dx) {
+            return 0;
+        }
+
+        @Override
+        public int clampViewPositionVertical(Component child, int top, int dy) {
+            return 0;
         }
     });
 
