@@ -11,7 +11,7 @@
         ohos:height="match_content"
         ohos:width="match_content"
         ohos:padding="4vp"
-        ohos:text="Item0"
+        ohos:text="$string:item"
         ohos:text_size="20fp"
         ohos:layout_alignment="center"/>
 

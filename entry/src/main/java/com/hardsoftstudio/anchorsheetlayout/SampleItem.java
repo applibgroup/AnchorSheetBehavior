@@ -4,7 +4,7 @@ package com.hardsoftstudio.anchorsheetlayout;
  * Class for list container.
  */
 public class SampleItem {
-    private String name;
+    private final String name;
 
     public SampleItem(String name) {
         this.name = name;
@@ -12,9 +12,5 @@ public class SampleItem {
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 }

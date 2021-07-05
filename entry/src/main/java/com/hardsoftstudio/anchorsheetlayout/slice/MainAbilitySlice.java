@@ -19,7 +19,6 @@ import ohos.agp.components.Text;
  */
 public class MainAbilitySlice extends AbilitySlice {
 
-
     private AnchorSheetLayout anchorSheetLayout;
 
     @Override
