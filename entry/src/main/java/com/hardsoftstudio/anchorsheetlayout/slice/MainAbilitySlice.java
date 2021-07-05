@@ -1,18 +1,24 @@
 package com.hardsoftstudio.anchorsheetlayout.slice;
 
+import com.hardsoftstudio.anchorsheetlayout.AnchorSheetLayout;
+import com.hardsoftstudio.anchorsheetlayout.NonNull;
 import com.hardsoftstudio.anchorsheetlayout.ResourceTable;
 import com.hardsoftstudio.anchorsheetlayout.SampleItem;
 import com.hardsoftstudio.anchorsheetlayout.SampleItemProvider;
-import com.hardsoftstudio.anchorsheetlayout.AnchorSheetLayout;
-import com.hardsoftstudio.anchorsheetlayout.NonNull;
-import ohos.aafwk.ability.AbilitySlice;
-import ohos.aafwk.content.Intent;
-import ohos.agp.components.*;
-
 import java.util.ArrayList;
 import java.util.List;
+import ohos.aafwk.ability.AbilitySlice;
+import ohos.aafwk.content.Intent;
+import ohos.agp.components.Button;
+import ohos.agp.components.Component;
+import ohos.agp.components.ListContainer;
+import ohos.agp.components.Text;
 
+/**
+ * MainAbilitySlice to check AnchorSheetLayout library.
+ */
 public class MainAbilitySlice extends AbilitySlice {
+
 
     private AnchorSheetLayout anchorSheetLayout;
 
@@ -21,11 +27,11 @@ public class MainAbilitySlice extends AbilitySlice {
         super.onStart(intent);
         super.setUIContent(ResourceTable.Layout_ability_main);
         initListContainer();
-        Button button = (Button) findComponentById(ResourceTable.Id_tap_me);
         anchorSheetLayout = (AnchorSheetLayout) findComponentById(ResourceTable.Id_anchorsheet_layout);
         anchorSheetLayout.setState(AnchorSheetLayout.STATE_COLLAPSED);
         anchorSheetLayout.setHideable(true);
         Text content = (Text) findComponentById(ResourceTable.Id_content);
+        Button button = (Button) findComponentById(ResourceTable.Id_tap_me);
         button.setClickedListener(component -> {
             switch (anchorSheetLayout.getState()) {
                 case AnchorSheetLayout.STATE_ANCHOR:
@@ -73,6 +79,7 @@ public class MainAbilitySlice extends AbilitySlice {
 
             @Override
             public void onSlide(@NonNull Component bottomSheet, float slideOffset) {
+                // Do nothing
             }
         });
 
@@ -103,4 +110,13 @@ public class MainAbilitySlice extends AbilitySlice {
         super.onForeground(intent);
     }
 
+    @Override
+    protected void onBackPressed() {
+        int state = anchorSheetLayout.getState();
+        if (state == AnchorSheetLayout.STATE_COLLAPSED || state == AnchorSheetLayout.STATE_HIDDEN) {
+            super.onBackPressed();
+        } else {
+            anchorSheetLayout.setState(AnchorSheetLayout.STATE_COLLAPSED);
+        }
+    }
 }
